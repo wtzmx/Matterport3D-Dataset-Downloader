@@ -54,20 +54,20 @@ def setup_logging(log_file):
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     
-    # Create console handler
+    # 创建控制台处理器
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
     
-    # Create file handler
+    # 创建文件处理器
     file_handler = logging.FileHandler(log_file)
     file_handler.setLevel(logging.INFO)
     
-    # Create formatter and add it to the handlers
+    # 创建格式器并将其添加到处理器中
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     console_handler.setFormatter(formatter)
     file_handler.setFormatter(formatter)
     
-    # Add the handlers to the logger
+    # 将处理器添加到记录器中
     logger.addHandler(console_handler)
     logger.addHandler(file_handler)
 
@@ -81,7 +81,7 @@ def get_scans_from_file(file_path):
         return []
 
 def download_release(release_scans, out_dir, file_types):
-    logging.info(f'Starting MP release download to {out_dir}...')
+    logging.info(f'开始下载 MP 发布到 {out_dir}...')
     with ThreadPoolExecutor(max_workers=4) as executor:
         futures = [
             executor.submit(download_scan, scan_id, out_dir, file_types)
@@ -89,7 +89,7 @@ def download_release(release_scans, out_dir, file_types):
         ]
         for future in as_completed(futures):
             future.result()
-    logging.info('MP release download completed.')
+    logging.info('MP 发布下载完成。')
 
 def download_file(url, out_file):
     out_dir = os.path.dirname(out_file)
@@ -113,14 +113,14 @@ def download_file(url, out_file):
         download_time = end_time - start_time
         download_speed = file_size / download_time / 1024
         pbar.set_postfix_str(f'{download_speed:.2f} KB/s')
-        logging.info(f'Download completed: {out_file}, Time taken: {download_time:.2f} seconds, Speed: {download_speed:.2f} KB/s')
+        logging.info(f'下载完成: {out_file}, 用时: {download_time:.2f}秒, 速度: {download_speed:.2f} KB/s')
         unzip_file(out_file)
     else:
-        logging.info(f'File already exists, skipping download: {out_file}')
+        logging.info(f'文件已存在，跳过下载: {out_file}')
         unzip_file(out_file)
 
 def download_scan(scan_id, out_dir, file_types):
-    logging.info(f'Starting download of MP scan {scan_id} ...')
+    logging.info(f'开始下载 MP 扫描 {scan_id} ...')
     scan_out_dir = os.path.join(out_dir, scan_id)
     if not os.path.isdir(scan_out_dir):
         os.makedirs(scan_out_dir)
@@ -131,10 +131,10 @@ def download_scan(scan_id, out_dir, file_types):
         ]
         for future in as_completed(futures):
             future.result()
-    logging.info(f'Scan download completed: {scan_id}')
+    logging.info(f'扫描下载完成 {scan_id}')
 
 def download_task_data(task_data, out_dir):
-    logging.info(f'Starting download of MP task data {str(task_data)} ...')
+    logging.info(f'开始下载 MP 任务数据 {str(task_data)} ...')
     with ThreadPoolExecutor(max_workers=4) as executor:
         futures = []
         for task_data_id in task_data:
@@ -148,77 +148,79 @@ def download_task_data(task_data, out_dir):
                     futures.append(executor.submit(download_file, url, localpath))
         for future in as_completed(futures):
             future.result()
-    logging.info(f'Task data download completed: {str(task_data)}')
+    logging.info(f'任务数据下载完成 {str(task_data)}')
 
 def unzip_file(file_path):
     if zipfile.is_zipfile(file_path):
         with zipfile.ZipFile(file_path, 'r') as zip_ref:
-            extract_dir = os.path.dirname(os.path.dirname(file_path))  # Extract to the parent directory, i.e., scans folder
+            extract_dir = os.path.dirname(os.path.dirname(file_path))  # 设置解压路径到上一级目录，即 scans 文件夹
             zip_ref.extractall(extract_dir)
-        logging.info(f'Extraction completed: {file_path}')
-        # Delete the zip file
+        logging.info(f'解压完成: {file_path}')
+        # 删除压缩包
         try:
             os.remove(file_path)
-            logging.info(f'Deleted zip file: {file_path}')
+            logging.info(f'删除压缩包: {file_path}')
         except OSError as e:
-            logging.error(f'Failed to delete zip file: {file_path}, Error: {e}')
+            logging.error(f'删除压缩包失败: {file_path}, 错误: {e}')
     else:
-        logging.warning(f'File is not a ZIP format, skipping extraction: {file_path}')
+        logging.warning(f'文件不是ZIP格式，跳过解压: {file_path}')
+
+
 
 def main():
     parser = argparse.ArgumentParser(description=
         '''
-        Download MP public dataset release.
-        Example usage:
+        下载 MP 公共数据发布。
+        示例调用：
           python download_mp.py -o base_dir --scans scans.txt --type object_segmentations --task_data semantic_voxel_label_data semantic_voxel_label_models
-        -o parameter is required, specifying the local directory base_dir.
-        After downloading, base_dir/v1/scans will be populated with scan data, base_dir/v1/tasks will be populated with task data.
-        Extract scan files from base_dir/v1/scans and task files from base_dir/v1/tasks/task_name.
-        --type parameter is optional (if not specified, all data types will be downloaded).
-        --scans parameter specifies the file containing the scan IDs to download.
-        --task_data parameter is optional, it will download task data and model files.
+        -o 参数是必需的，指定本地目录 base_dir。
+        下载后 base_dir/v1/scans 将填充扫描数据，base_dir/v1/tasks 将填充任务数据。
+        从 base_dir/v1/scans 中解压扫描文件，从 base_dir/v1/tasks/task_name 中解压任务文件。
+        --type 参数是可选的（如果未指定，则下载所有数据类型）。
+        --scans 参数指定要下载的扫描ID文件。
+        --task_data 参数是可选的，将下载任务数据和模型文件。
         ''',
         formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('-o', '--out_dir', required=True, help='Directory to download to')
-    parser.add_argument('--scans', required=True, help='File containing scan IDs')
-    parser.add_argument('--task_data', default=[], nargs='+', help='Task data files to download. Any of: ' + ','.join(TASK_FILES.keys()))
-    parser.add_argument('--type', nargs='+', help='Specific file types to download. Any of: ' + ','.join(FILETYPES))
-    parser.add_argument('--log_file', default='download.log', help='Path to log file')
+    parser.add_argument('-o', '--out_dir', required=True, help='下载到的目录')
+    parser.add_argument('--scans', required=True, help='包含扫描ID的文件')
+    parser.add_argument('--task_data', default=[], nargs='+', help='要下载的任务数据文件。任意一个：' + ','.join(TASK_FILES.keys()))
+    parser.add_argument('--type', nargs='+', help='要下载的特定文件类型。任意一个：' + ','.join(FILETYPES))
+    parser.add_argument('--log_file', default='download.log', help='日志文件路径')
     args = parser.parse_args()
 
     setup_logging(args.log_file)
 
-    logging.info('Press any key to confirm you have agreed to the MP Terms of Service as described below:')
+    logging.info('按任意键继续确认您已同意 MP 使用条款，如下所述：')
     logging.info(TOS_URL)
     logging.info('***')
-    input('Press any key to continue, or CTRL-C to exit.')
+    input('按任意键继续，或按 CTRL-C 退出。')
 
     release_scans = get_scans_from_file(args.scans)
     if not release_scans:
-        logging.error(f"Failed to read scan ID list, please check the file path and content: {args.scans}")
+        logging.error(f"未能读取扫描ID列表，请检查文件路径和内容: {args.scans}")
         return
 
-    logging.info(f"A total of {len(release_scans)} room data will be downloaded this time. Do you confirm the download? (y/n)")
+    logging.info(f"本次共下载 {len(release_scans)} 个房间数据，是否确认下载？ (y/n)")
     confirm = input().strip().lower()
     if confirm != 'y':
-        logging.info("Download cancelled.")
+        logging.info("取消下载。")
         return
 
     file_types = FILETYPES
 
-    # Download task data
+    # 下载任务数据
     if args.task_data:
-        if set(args.task_data) & set(TASK_FILES.keys()):  # Download task data
+        if set(args.task_data) & set(TASK_FILES.keys()):  # 下载任务数据
             out_dir = os.path.join(args.out_dir, RELEASE_TASKS)
             download_task_data(args.task_data, out_dir)
         else:
-            logging.error('Error: Unrecognized task data ID: ' + str(args.task_data))
-            input('Press any key to continue downloading the main dataset, or CTRL-C to exit.')
+            logging.error('错误：无法识别的任务数据 ID：' + str(args.task_data))
+            input('按任意键继续下载主数据集，或按 CTRL-C 退出。')
 
-    # Download specific file types?
+    # 下载特定文件类型？
     if args.type:
         if not set(args.type) & set(FILETYPES):
-            logging.error('Error: Invalid file type: ' + str(args.type))
+            logging.error('错误：无效的文件类型：' + str(args.type))
             return
         file_types = args.type
 
